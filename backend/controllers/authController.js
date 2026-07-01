@@ -10,7 +10,7 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Email already registered. Please log in.' });
     }
 
-    const user = await User.create({ name, email, password, role: role || 'user', phone, organization });
+    const user = await User.create({ name, email, password, role: role || 'participant', phone, organization });
 
     res.status(201).json({
       _id: user._id,
@@ -34,9 +34,15 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and password.' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+password');
 
-    if (!user || !(await user.matchPassword(password))) {
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid email or password.' });
+    }
+
+    const isMatch = await user.matchPassword(password);
+
+    if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
@@ -59,7 +65,7 @@ const loginUser = async (req, res) => {
 // @access  Private
 const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
+    const user = await User.findById(req.user._id).select('+password');
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
